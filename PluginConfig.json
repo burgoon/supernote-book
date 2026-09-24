@@ -1,0 +1,13 @@
+{
+  "name": "Supernote Book",
+  "desc": "Browse every page of every notebook in one continuous view.",
+  "iconPath": "assets/icon.png",
+  "versionName": "1.0.0",
+  "versionCode": "1",
+  "pluginID": "ls0r4hv80qg25rrp",
+  "pluginKey": "SupernoteBook",
+  "jsMainPath": "index",
+  "uses-permissions": [
+    "plugin.permission.FILE:READ"
+  ]
+}
