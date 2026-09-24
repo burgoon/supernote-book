@@ -1,4 +1,4 @@
-import {FileUtils, PluginFileAPI, PluginManager} from 'sn-plugin-lib';
+import {FileUtils, PluginFileAPI, PluginManager, PluginNoteAPI} from 'sn-plugin-lib';
 
 export const NOTE_ROOT = '/storage/emulated/0/Note';
 export const FILE_READ = 'plugin.permission.FILE:READ';
@@ -57,6 +57,9 @@ export async function ensureReadPermission(): Promise<boolean> {
   );
   return r === 1 || r === 2;
 }
+
+let cacheDir: string | null = null;
+const md5s = new Map<string, string>(); // notebook path -> file hash, per scan
 
 const has = (obj: any, fn: string) => typeof obj?.[fn] === 'function';
 
@@ -117,6 +120,11 @@ async function noteFiles(root: string): Promise<string[]> {
 }
 
 export async function scanLibrary(root = NOTE_ROOT): Promise<Page[]> {
+  // The open note may have unsaved ink; flush it so its file (and hash) is current.
+  try {
+    await PluginNoteAPI.saveCurrentNote();
+  } catch {}
+  md5s.clear();
   const files = await noteFiles(root);
   const books: Notebook[] = [];
   for (const path of files) {
@@ -145,9 +153,6 @@ export async function scanLibrary(root = NOTE_ROOT): Promise<Page[]> {
   }
   return pages;
 }
-
-let cacheDir: string | null = null;
-const md5s = new Map<string, string>();
 
 async function cacheRoot(): Promise<string> {
   if (cacheDir) {return cacheDir;}
