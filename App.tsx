@@ -60,17 +60,21 @@ export default function App() {
 
   useEffect(() => {
     load();
-    // life events arrive as onMsg(type); 2 = start (the view was shown again)
-    let sub: {remove: () => void} | null = null;
+    // Every return to the view goes through the toolbar button, so that is
+    // the reliable "we're visible again" signal; the life event is a bonus.
+    const subs: {remove: () => void}[] = [];
     try {
-      sub = PluginManager.registerPluginLifeListener({
-        onMsg: (msg: any) => {
-          const type = typeof msg === 'object' && msg ? msg.type ?? msg.data : msg;
-          if (Number(type) === 2) {load();}
-        },
-      });
+      subs.push(PluginManager.registerButtonListener({onButtonPress: () => load()}));
+      subs.push(
+        PluginManager.registerPluginLifeListener({
+          onMsg: (msg: any) => {
+            const type = typeof msg === 'object' && msg ? msg.type ?? msg.data : msg;
+            if (Number(type) === 2) {load();}
+          },
+        }),
+      );
     } catch {}
-    return () => sub?.remove();
+    return () => subs.forEach(s => s.remove());
   }, [load]);
 
   const jump = (i: number) => {

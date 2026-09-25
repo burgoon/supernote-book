@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import {bookLabel, dayLabel, openPage, renderPage, type Page} from './library';
+import Scrubber from './Scrubber';
 
 type Props = {pages: Page[]; start: number; onIndex: (i: number) => void};
 
@@ -44,7 +45,7 @@ function Leaf({page, width, height, total}: {page: Page; width: number; height: 
 
 export default function Book({pages, start, onIndex}: Props) {
   const {width, height} = Dimensions.get('window');
-  const leafH = height - 56;
+  const leafH = height - 72;
   const list = useRef<FlatList<Page>>(null);
   const [index, setIndex] = useState(start);
 
@@ -101,14 +102,18 @@ export default function Book({pages, start, onIndex}: Props) {
         showsHorizontalScrollIndicator={false}
       />
       <View style={styles.bar}>
+        <Pressable style={styles.btn} onPress={() => goto(0)}>
+          <Text style={styles.btnText}>⇤</Text>
+        </Pressable>
         <Pressable style={styles.btn} onPress={() => goto(index - 1)}>
           <Text style={styles.btnText}>‹</Text>
         </Pressable>
-        <Text style={styles.counter}>
-          {index + 1} / {pages.length}
-        </Text>
+        <Scrubber pages={pages} index={index} onJump={goto} />
         <Pressable style={styles.btn} onPress={() => goto(index + 1)}>
           <Text style={styles.btnText}>›</Text>
+        </Pressable>
+        <Pressable style={styles.btn} onPress={() => goto(pages.length - 1)}>
+          <Text style={styles.btnText}>⇥</Text>
         </Pressable>
       </View>
     </View>
@@ -122,8 +127,7 @@ const styles = StyleSheet.create({
   caption: {textAlign: 'center', fontSize: 14, color: '#000', paddingBottom: 4},
   muted: {color: '#666', fontSize: 16},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-  bar: {height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#000', paddingHorizontal: 8},
-  btn: {width: 72, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#000'},
+  bar: {height: 72, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderColor: '#000', paddingHorizontal: 8, gap: 6},
+  btn: {width: 52, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#000'},
   btnText: {fontSize: 28, color: '#000', lineHeight: 32},
-  counter: {fontSize: 16, color: '#000'},
 });
