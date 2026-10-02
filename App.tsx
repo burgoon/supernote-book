@@ -27,7 +27,7 @@ const SORTS: {key: SortKey; label: string}[] = [
   {key: 'name', label: 'Name'},
 ];
 
-function notebookRows(pages: Page[], sort: Sort): Row[] {
+function notebookRows(pages: Page[]): Row[] {
   const rows: Row[] = [];
   for (const p of pages) {
     if (p.page === 0) {
@@ -182,7 +182,7 @@ export default function App() {
                   </Pressable>
                 ))}
               </View>
-              <Shelf rows={notebookRows(pages, sort)} onPick={jump} empty="No notebooks." />
+              <Shelf rows={notebookRows(pages)} onPick={jump} empty="No notebooks." />
             </View>
           ) : (
             <Shelf rows={starredRows(starred)} onPick={jump} empty="No starred pages." />
