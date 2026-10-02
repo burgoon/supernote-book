@@ -11,6 +11,9 @@ export type Notebook = {
   pages: number;
 };
 
+export type SortKey = 'created' | 'name';
+export type Sort = {key: SortKey; dir: 'asc' | 'desc'};
+
 export type Page = {
   key: string;
   book: Notebook;
@@ -18,12 +21,14 @@ export type Page = {
   index: number; // position in the whole library
 };
 
-const STAMP = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/;
+// Supernote names new notebooks YYYYMMDD_HHMMSS. Renamed ones often keep the
+// date, or the date and time, somewhere in the name; any of those will do.
+const STAMP = /(?:^|[^0-9])((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?:_([01]\d|2[0-3])([0-5]\d)([0-5]\d))?(?![0-9])/;
 
 export function createdFromName(name: string): number {
   const m = STAMP.exec(name);
   if (!m) {return 0;}
-  const [, y, mo, d, h, mi, s] = m.map(Number);
+  const [, y, mo, d, h, mi, s] = m.map(x => Number(x ?? 0));
   return new Date(y, mo - 1, d, h, mi, s).getTime();
 }
 
@@ -77,6 +82,8 @@ type Entry = {path: string; name: string; dir: boolean | null};
 
 let sampleEntry = '';
 
+export const listingSample = () => sampleEntry || 'n/a';
+
 function toEntry(raw: any, dir: string): Entry | null {
   if (raw == null) {return null;}
   if (typeof raw === 'string') {
@@ -94,32 +101,32 @@ function toEntry(raw: any, dir: string): Entry | null {
   return null;
 }
 
-async function walk(dir: string, out: string[]): Promise<void> {
+async function walk(dir: string, out: Entry[]): Promise<void> {
   const raw = (await FileUtils.listFiles(dir)) as any;
   const list: any[] = Array.isArray(raw) ? raw : raw && Array.isArray(raw.result) ? raw.result : [];
   for (const item of list) {
     const e = toEntry(item, dir);
     if (!e || e.name.startsWith('.')) {continue;}
     const isNote = e.name.toLowerCase().endsWith('.note');
-    if (isNote) {out.push(e.path);}
+    if (isNote) {out.push(e);}
     else if (e.dir === true || (e.dir === null && !e.name.includes('.'))) {await walk(e.path, out);}
   }
 }
 
-async function noteFiles(root: string): Promise<string[]> {
+async function noteFiles(root: string): Promise<Entry[]> {
   if (has(FileUtils, 'listFiles')) {
-    const out: string[] = [];
+    const out: Entry[] = [];
     await walk(root, out);
     return out;
   }
   if (has(FileUtils, 'getFileList')) {
     const all = (await FileUtils.getFileList(['note'])) || [];
-    return all.filter(p => p.startsWith(root + '/'));
+    return all.filter(p => p.startsWith(root + '/')).map(p => toEntry(p, root)!);
   }
   throw new Error('no file listing API available\n' + capabilities());
 }
 
-export async function scanLibrary(root = NOTE_ROOT): Promise<Page[]> {
+export async function scanLibrary(root = NOTE_ROOT): Promise<Notebook[]> {
   // The open note may have unsaved ink; flush it so its file (and hash) is current.
   try {
     await PluginNoteAPI.saveCurrentNote();
@@ -127,7 +134,7 @@ export async function scanLibrary(root = NOTE_ROOT): Promise<Page[]> {
   md5s.clear();
   const files = await noteFiles(root);
   const books: Notebook[] = [];
-  for (const path of files) {
+  for (const {path} of files) {
     const name = path.slice(path.lastIndexOf('/') + 1).replace(/\.note$/i, '');
     const rel = path.startsWith(root + '/') ? path.slice(root.length + 1) : path;
     const folder = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
@@ -141,15 +148,25 @@ export async function scanLibrary(root = NOTE_ROOT): Promise<Page[]> {
       books.push({path, name, folder, created: createdFromName(name), pages});
     }
   }
-  books.sort((a, b) => a.created - b.created || a.name.localeCompare(b.name));
+  if (!books.length) {
+    throw new Error(`no notebooks found under ${root} (${files.length} files listed)\nsample entry: ${sampleEntry || 'n/a'}\n` + capabilities());
+  }
+  return books;
+}
+
+export function orderBooks(books: Notebook[], sort: Sort): Notebook[] {
+  const byName = (a: Notebook, b: Notebook) => bookLabel(a).localeCompare(bookLabel(b), undefined, {numeric: true});
+  const cmp = sort.key === 'name' ? byName : (a: Notebook, b: Notebook) => a.created - b.created || byName(a, b);
+  const out = [...books].sort(cmp);
+  return sort.dir === 'desc' ? out.reverse() : out;
+}
+
+export function buildPages(books: Notebook[]): Page[] {
   const pages: Page[] = [];
   for (const book of books) {
     for (let p = 0; p < book.pages; p++) {
       pages.push({key: `${book.path}#${p}`, book, page: p, index: pages.length});
     }
-  }
-  if (!pages.length) {
-    throw new Error(`no notebooks found under ${root} (${files.length} files listed)\nsample entry: ${sampleEntry || 'n/a'}\n` + capabilities());
   }
   return pages;
 }
