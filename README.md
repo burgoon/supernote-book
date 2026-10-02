@@ -9,12 +9,15 @@ notebooks. This removes that step.
 ## Views
 
 - **Book** — all pages, oldest notebook first, one page per screen. Swipe or use
-  the arrows. Opens at the notebook that was open when the plugin was launched.
+  the arrows; the scrubber in the footer jumps anywhere, with first/last buttons.
+  Opens at the notebook that was open when the plugin was launched.
 - **Notebooks** — the notebooks in the book's order; tap to jump the book there.
   Sort by created date or name, in either direction; the book follows.
 - **Starred** — pages marked with a five-star, across all notebooks.
 
-A two-finger swipe left or right moves between the three views.
+A two-finger swipe left or right moves between the three views. The ↻ button
+rescans the Note folder (this also happens on every open); long-press it for a
+diagnostics view.
 
 ## Install
 
@@ -28,9 +31,13 @@ Requires firmware with plugin support (Settings → Apps → Plugins is present)
 
 ## Behaviour
 
-- Ordering: notebook creation time from the `YYYYMMDD_HHMMSS` file name Supernote
-  assigns, then page order. Notebooks without that prefix sort first. Subfolders
-  of the Note folder are included; the folder is shown with the notebook name.
+- Ordering: by default, notebook creation time then page order. Creation time is
+  read from the notebook's file name: the `YYYYMMDD_HHMMSS` stamp Supernote
+  assigns, or a `YYYYMMDD` date (with or without time) anywhere in a renamed
+  file name. Names with no date sort first. Sorting by name uses natural order
+  (`note2` before `note10`). The SDK exposes no file dates, so there is no sort
+  by modified. Subfolders of the Note folder are included; the folder is shown
+  with the notebook name.
 - Rendering: pages are rendered to PNG on first view and cached in the plugin's
   private directory, keyed by the notebook file's MD5. Edited notebooks
   re-render; unchanged ones load from cache.

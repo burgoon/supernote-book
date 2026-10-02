@@ -21,12 +21,14 @@ export type Page = {
   index: number; // position in the whole library
 };
 
-const STAMP = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/;
+// Supernote names new notebooks YYYYMMDD_HHMMSS. Renamed ones often keep the
+// date, or the date and time, somewhere in the name; any of those will do.
+const STAMP = /(?:^|[^0-9])((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?:_([01]\d|2[0-3])([0-5]\d)([0-5]\d))?(?![0-9])/;
 
 export function createdFromName(name: string): number {
   const m = STAMP.exec(name);
   if (!m) {return 0;}
-  const [, y, mo, d, h, mi, s] = m.map(Number);
+  const [, y, mo, d, h, mi, s] = m.map(x => Number(x ?? 0));
   return new Date(y, mo - 1, d, h, mi, s).getTime();
 }
 
