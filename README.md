@@ -29,7 +29,7 @@ diagnostics view.
 
 Requires firmware with plugin support (Settings → Apps → Plugins is present).
 
-## Behaviour
+## Behavior
 
 - Ordering: by default, notebook creation time then page order. Creation time is
   read from the notebook's file name: the `YYYYMMDD_HHMMSS` stamp Supernote
@@ -38,9 +38,12 @@ Requires firmware with plugin support (Settings → Apps → Plugins is present)
   (`note2` before `note10`). The SDK exposes no file dates, so there is no sort
   by modified. Subfolders of the Note folder are included; the folder is shown
   with the notebook name.
-- Rendering: pages are rendered to PNG on first view and cached in the plugin's
-  private directory, keyed by the notebook file's MD5. Edited notebooks
-  re-render; unchanged ones load from cache.
+- Rendering: each page is shown as its own template with the ink layered on
+  top, as in the editor. Ink is rendered on first view and cached in the
+  plugin's private directory, keyed by the notebook file's MD5, so edited
+  notebooks re-render and unchanged ones load from cache. Templates are
+  rendered once per distinct template. Stale renders are removed after each
+  scan. A page whose template can't be rendered falls back to plain white.
 - Permissions: `plugin.permission.FILE:READ` only. Nothing is written outside
   the plugin's own directory. No network.
 - Errors are shown in the plugin view rather than closing it; the page includes
