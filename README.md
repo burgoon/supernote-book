@@ -10,8 +10,11 @@ notebooks. This removes that step.
 
 - **Book** — all pages, oldest notebook first, one page per screen. Swipe or use
   the arrows. Opens at the notebook that was open when the plugin was launched.
-- **Notebooks** — notebooks newest first; tap to jump the book there.
+- **Notebooks** — the notebooks in the book's order; tap to jump the book there.
+  Sort by created date or name, in either direction; the book follows.
 - **Starred** — pages marked with a five-star, across all notebooks.
+
+A two-finger swipe left or right moves between the three views.
 
 ## Install
 
@@ -63,7 +66,8 @@ Observed on device (firmware with plugin support, `sn-plugin-lib` 0.1.65):
 
 - `PluginManager.registerPluginLifeListener` takes `{onMsg(type)}`, not the
   `onStart`/`onStop` shape shown in the docs. Type `2` is start.
-- `FileUtils.listFiles` returns objects, not path strings.
+- `FileUtils.listFiles` returns objects shaped `{type, path}`, not path strings, and
+  no modification times — there is no file-stat call, so "sort by modified" is not possible.
 - A JavaScript error in a release bundle closes the plugin view silently;
   wrap the root in an error boundary.
 
