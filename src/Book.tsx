@@ -8,16 +8,16 @@ import {
   Text,
   View,
 } from 'react-native';
-import {bookLabel, dayLabel, openPage, renderPage, type Page} from './library';
+import {bookLabel, dayLabel, openPage, renderPage, type Page, type Rendered} from './library';
 import Scrubber from './Scrubber';
 
 type Props = {pages: Page[]; start: number; onIndex: (i: number) => void};
 
 function Leaf({page, width, height, total}: {page: Page; width: number; height: number; total: number}) {
-  const [uri, setUri] = useState<string | null>(null);
+  const [img, setImg] = useState<Rendered | null>(null);
   useEffect(() => {
     let live = true;
-    renderPage(page).then(u => live && setUri(u));
+    renderPage(page).then(r => live && setImg(r));
     return () => {
       live = false;
     };
@@ -25,8 +25,11 @@ function Leaf({page, width, height, total}: {page: Page; width: number; height: 
   return (
     <Pressable style={{width, height}} onPress={() => openPage(page)}>
       <View style={styles.leaf}>
-        {uri ? (
-          <Image source={{uri}} style={styles.image} resizeMode="contain" />
+        {img ? (
+          <>
+            {img.template ? <Image source={{uri: img.template}} style={styles.layer} resizeMode="contain" /> : null}
+            <Image source={{uri: img.ink}} style={styles.layer} resizeMode="contain" />
+          </>
         ) : (
           <Text style={styles.muted}>rendering…</Text>
         )}
@@ -123,7 +126,7 @@ export default function Book({pages, start, onIndex}: Props) {
 const styles = StyleSheet.create({
   fill: {flex: 1},
   leaf: {flex: 1, margin: 8, borderWidth: 1, borderColor: '#000', backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center'},
-  image: {width: '100%', height: '100%'},
+  layer: {position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'},
   caption: {textAlign: 'center', fontSize: 14, color: '#000', paddingBottom: 4},
   muted: {color: '#666', fontSize: 16},
   center: {flex: 1, alignItems: 'center', justifyContent: 'center'},

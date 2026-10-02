@@ -73,7 +73,7 @@ export function capabilities(): string {
     `${name}: ` + fns.map(f => `${f}${has(obj, f) ? '' : '✗'}`).join(' ');
   return [
     report('FileUtils', FileUtils, ['listFiles', 'getFileList', 'exists', 'makeDir', 'getFileMD5', 'getExternalDirPath']),
-    report('PluginFileAPI', PluginFileAPI, ['getNoteTotalPageNum', 'generateNotePng', 'searchFiveStars', 'openFile']),
+    report('PluginFileAPI', PluginFileAPI, ['getNoteTotalPageNum', 'generateNotePng', 'getNotePageTemplate', 'generateNoteTemplatePng', 'searchFiveStars', 'openFile']),
     report('PluginManager', PluginManager, ['getPluginDirPath', 'hasPermission', 'closePluginView']),
   ].join('\n');
 }
@@ -188,9 +188,15 @@ async function bookHash(book: Notebook): Promise<string> {
   return h;
 }
 
-export async function renderPage(page: Page, scale = 1): Promise<string | null> {
+export type Rendered = {ink: string; template: string | null};
+
+// Ink is rendered on a transparent background and layered over the page's
+// own template, so the book shows each page as it looks in the editor.
+// Templates are cached once per distinct template (by the MD5 the device
+// reports), ink once per notebook version and page.
+export async function renderPage(page: Page, scale = 1): Promise<Rendered | null> {
   const dir = await cacheRoot();
-  const png = `${dir}/${await bookHash(page.book)}_${page.page}_${scale}.png`;
+  const png = `${dir}/${await bookHash(page.book)}_${page.page}_${scale}_ink.png`;
   if (!(await FileUtils.exists(png))) {
     const ok = unwrap<boolean>(
       await PluginFileAPI.generateNotePng({
@@ -198,12 +204,55 @@ export async function renderPage(page: Page, scale = 1): Promise<string | null> 
         page: page.page,
         times: scale,
         pngPath: png,
-        type: 1,
+        type: 0,
       }),
     );
     if (!ok) {return null;}
   }
-  return `file://${png}`;
+  return {ink: `file://${png}`, template: await renderTemplate(page, dir)};
+}
+
+async function renderTemplate(page: Page, dir: string): Promise<string | null> {
+  try {
+    const info = unwrap<{name?: string; md5?: string}>(
+      await PluginFileAPI.getNotePageTemplate(page.book.path, page.page),
+    );
+    const key = info?.md5 || (info?.name ? info.name.replace(/[^A-Za-z0-9_-]/g, '_') : '');
+    if (!key) {return null;}
+    const png = `${dir}/template_${key}.png`;
+    if (!(await FileUtils.exists(png))) {
+      const ok = unwrap<boolean>(
+        await PluginFileAPI.generateNoteTemplatePng(page.book.path, page.page, png),
+      );
+      if (!ok) {return null;}
+    }
+    return `file://${png}`;
+  } catch {
+    return null; // no template, or an older host without the call: plain white
+  }
+}
+
+// Drop cached renders that no notebook version can use any more: ink for
+// notebooks that were edited or deleted, and files from older cache layouts.
+// Hashing every notebook here also warms the hash cache for rendering.
+// Templates are shared and few, so they are kept.
+export async function cleanCache(books: Notebook[]): Promise<number> {
+  const dir = await cacheRoot();
+  const live = new Set<string>();
+  for (const b of books) {
+    live.add(await bookHash(b));
+  }
+  const raw = (await FileUtils.listFiles(dir)) as any;
+  const list: any[] = Array.isArray(raw) ? raw : raw && Array.isArray(raw.result) ? raw.result : [];
+  let removed = 0;
+  for (const item of list) {
+    const e = toEntry(item, dir);
+    if (!e || e.dir === true || !e.name.endsWith('.png') || e.name.startsWith('template_')) {continue;}
+    const prefix = e.name.split('_')[0];
+    const current = e.name.endsWith('_ink.png') && live.has(prefix);
+    if (!current && (await FileUtils.deleteFile(e.path))) {removed++;}
+  }
+  return removed;
 }
 
 export async function starredPages(pages: Page[]): Promise<Page[]> {

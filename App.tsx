@@ -8,6 +8,7 @@ import {
   bookLabel,
   buildPages,
   capabilities,
+  cleanCache,
   dayLabel,
   ensureReadPermission,
   listingSample,
@@ -76,6 +77,7 @@ export default function App() {
       setIndex(at ? at.index : Math.max(0, ordered.length - 1));
       setBooks(lib);
       starredPages(ordered).then(setStarred);
+      cleanCache(lib).catch(() => {});
     } catch (e: any) {
       const where = String(e?.stack || '').split('\n').slice(0, 3).join('\n');
       setError(`${e?.message || e}\n\n${where}\n\n${capabilities()}`);
